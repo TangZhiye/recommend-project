@@ -199,11 +199,11 @@
                     this.confirmFeedback_show = false 
                 }
             },
-            // store all user's feedback to local users.csv
+            // store all user's feedback and get 2nd recommendation
             confirmFeedback(){
                 alert(JSON.stringify(this.allFeedback))
                 // store all user's feedback to local users.csv
-                axios.post(this.baseurl + "/api/fisrtFeedback", [this.allFeedback])
+                axios.post(this.baseurl + "/api/fisrt_feedback", [this.username, this.allFeedback])
                 // get 2nd recommend
                 axios.get(this.baseurl+'/api/add_recommend/' + [this.allFeedback]).then((res) =>{
                     console.log(res.data);

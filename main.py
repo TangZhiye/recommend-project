@@ -64,23 +64,14 @@ def login(username: list):
     username = username[0]
     print(username)
     users_path = "users.csv"
-    # initialize users.csv
-    if not os.path.exists(users_path):
-        user_df = DataFrame(
-            data=[[username,'','','','']],
-            columns=("Username","Recommend_Algo","Round_of_Recommendation","Movie_id","Rate_of_user"))
-        user_df.to_csv(users_path,index=True)
-        return {"result": True}
     # check same name
-    users_df = read_csv(users_path,index_col=0,header=0)
-    print(users_df)
-    if username in users_df["Username"].values:
-        return {"result": False}
-    # store username
-    users_df = users_df.append([{"Username":username}], ignore_index=False)
-    users_df = users_df.reset_index(drop=True)
-    users_df.to_csv(users_path,index=True)
+    if os.path.exists(users_path):
+        users_df = read_csv(users_path,index_col=0,header=0)
+        print(users_df)
+        if username in users_df["Username"].values:
+            return {"result": False}
     return {"result": True}
+
 
 @app.post("/api/movies")
 def get_movies(genre: list):
@@ -111,6 +102,38 @@ def get_recommend(movies: List[Movie]):
     # results = rec_movies.loc[:, ['movie_id', 'movie_title', 'release_date', 'poster_url', 'like']]
     results = rec_movies.loc[:, ['movie_id', 'movie_title', 'release_date', 'poster_url', 'feedback']]
     return json.loads(results.to_json(orient="records"))
+
+@app.post("/api/fisrt_feedback")
+def store_first_feedback(first_feedback: list):
+    username = first_feedback[0]
+    first_feedback = first_feedback[1]
+    print(username)
+    print(first_feedback)
+    users_path = "users.csv"
+    # initialize users.csv, add first user
+    data = []
+    if not os.path.exists(users_path):
+        for movie_id, rate in first_feedback.items():
+            data.append([1,username, '', '1st_round', movie_id, rate]) 
+        new_user_df = DataFrame(
+                data=data,
+                columns=("User_id","Username","Recommend_Algo","Round_of_Recommendation","Movie_id","Rate_of_user"))
+        new_user_df.to_csv(users_path,index=True)
+        return {"result": True}
+    # store username
+    users_df = read_csv(users_path,index_col=0,header=0)
+    print(users_df)
+    print(users_df.iloc[-1,0])
+    new_user_id = users_df.iloc[-1,0] + 1
+    for movie_id, rate in first_feedback.items():
+            data.append([new_user_id,username, '', '1st_round', movie_id, rate]) 
+    new_user_df = DataFrame(
+            data=data,
+            columns=("User_id","Username","Recommend_Algo","Round_of_Recommendation","Movie_id","Rate_of_user"))
+    users_df = users_df.append(new_user_df, ignore_index=False)
+    users_df = users_df.reset_index(drop=True)
+    users_df.to_csv(users_path,index=True)
+    return {"result": True}
 
 
 @app.get("/api/add_recommend/{item_id}")
