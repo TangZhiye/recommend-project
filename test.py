@@ -3,10 +3,14 @@ from numpy import true_divide
 import pandas as pd
 from pandas.core.frame import DataFrame
 import csv
-
 from pandas.io.parsers import read_csv
 
+import bioinfokit
+from bioinfokit.analys import get_data,stat
 
+
+
+'''
 username = "唐"
 users_path = "users.csv"
 if not os.path.exists(users_path):
@@ -26,3 +30,4 @@ else:
     # print(users_df)
     users_df.to_csv(users_path,index=True)
     # print("true")
+'''

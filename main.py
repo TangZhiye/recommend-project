@@ -17,6 +17,7 @@ import json
 from surprise import dump
 from surprise import KNNBasic
 from surprise import Dataset
+import time
 
 app = FastAPI()
 app.add_middleware(
@@ -28,7 +29,8 @@ app.add_middleware(
 )
 
 # =======================DATA=========================
-data = pd.read_csv("movie_info.csv")
+# using ml-latest-small dataset
+data = pd.read_csv("movie_info_latest.csv")
 
 """
 =================== Body =============================
@@ -38,25 +40,25 @@ data = pd.read_csv("movie_info.csv")
 class Movie(BaseModel):
     movie_id: int
     movie_title: str
-    release_date: str
+    release_year: str
     score: int
 
 
 # == == == == == == == == == API == == == == == == == == == == =
 
-# show four genres
-'''
-@app.get("/api/genre")
-def get_genre():
-    return {'genre': ["Action", "Adventure", "Animation", "Children"]}
-'''
-
 # show all generes
+# @app.get("/api/genre")
+# def get_genre():
+#     return {'genre': ["Action", "Adventure", "Animation", "Children", "Comedy", "Crime",
+#                       "Documentary", "Drama", "Fantasy", "Film_Noir", "Horror", "Musical", "Mystery",
+#                       "Romance", "Sci_Fi", "Thriller", "War", "Western"]}
+
+# ml-latest-small dataset genre
 @app.get("/api/genre")
 def get_genre():
-    return {'genre': ["Action", "Adventure", "Animation", "Children", "Comedy", "Crime",
-                      "Documentary", "Drama", "Fantasy", "Film_Noir", "Horror", "Musical", "Mystery",
-                      "Romance", "Sci_Fi", "Thriller", "War", "Western"]}
+    return {'genre':['Action', 'Adventure', 'Animation', 'Children', 'Comedy', 'Crime',
+     'Documentary', 'Drama', 'Fantasy', 'Film_Noir', 'Horror', 'IMAX', 'Musical', 'Mystery',
+     'Romance', 'Sci_Fi', 'Thriller', 'War', 'Western', 'Other']}
 
 
 @app.post("/api/login")
@@ -77,20 +79,24 @@ def login(username: list):
 def get_movies(genre: list):
     print(genre)
     query_str = " or ".join(map(map_genre, genre))
-    # print(query_str)
+    print(query_str)
     results = data.query(query_str)
     # print(results)
     results.loc[:, 'score'] = None
-    results = results.sample(18).loc[:, ['movie_id', 'movie_title', 'release_date', 'poster_url', 'score']]
+    results = results.sample(18).loc[:, ['movie_id', 'movie_title', 'release_year', 'poster_url', 'score']]
     # print(results.to_json(orient="records"))
     return json.loads(results.to_json(orient="records"))
 
 
 @app.post("/api/recommend")
-def get_recommend(movies: List[Movie]):
+def get_recommend(movies: list):
+    username = movies[0]
+    movies = movies[1]
     print(movies)
-    iid = str(sorted(movies, key=lambda i: i.score, reverse=True)[0].movie_id)
-    score = int(sorted(movies, key=lambda i: i.score, reverse=True)[0].score)
+    print('username!!!')
+    print(username)
+    iid = str(sorted(movies, key=lambda i: i['score'], reverse=True)[0]['movie_id'])
+    score = int(sorted(movies, key=lambda i: i['score'], reverse=True)[0]['score'])
     res = get_initial_items(iid,score)
     res = [int(i) for i in res]
     if len(res) > 12:
@@ -100,7 +106,7 @@ def get_recommend(movies: List[Movie]):
     print(rec_movies)
     rec_movies.loc[:, 'feedback'] = None
     # results = rec_movies.loc[:, ['movie_id', 'movie_title', 'release_date', 'poster_url', 'like']]
-    results = rec_movies.loc[:, ['movie_id', 'movie_title', 'release_date', 'poster_url', 'feedback']]
+    results = rec_movies.loc[:, ['movie_id', 'movie_title', 'release_year', 'poster_url', 'feedback']]
     return json.loads(results.to_json(orient="records"))
 
 @app.post("/api/fisrt_feedback")
@@ -135,30 +141,33 @@ def store_first_feedback(first_feedback: list):
     users_df.to_csv(users_path,index=True)
     return {"result": True}
 
+@app.get("/api/add_recommend")
+async def add_recommend(first_feedback: list):
+    first_feedback = first_feedback[0]
 
-@app.get("/api/add_recommend/{item_id}")
-async def add_recommend(item_id):
-    res = get_similar_items(str(item_id), n=5)
-    res = [int(i) for i in res]
-    print(res)
-    rec_movies = data.loc[data['movie_id'].isin(res)]
-    print(rec_movies)
-    rec_movies.loc[:, 'like'] = None
-    results = rec_movies.loc[:, ['movie_id', 'movie_title', 'release_date', 'poster_url', 'like']]
-    return json.loads(results.to_json(orient="records"))
+# @app.get("/api/add_recommend/{item_id}")
+# async def add_recommend(item_id):
+#     res = get_similar_items(str(item_id), n=5)
+#     res = [int(i) for i in res]
+#     print(res)
+#     rec_movies = data.loc[data['movie_id'].isin(res)]
+#     print(rec_movies)
+#     rec_movies.loc[:, 'like'] = None
+#     results = rec_movies.loc[:, ['movie_id', 'movie_title', 'release_date', 'poster_url', 'like']]
+#     return json.loads(results.to_json(orient="records"))
 
 
 def user_add(iid, score):
-    user = '944'
+    user = '611'
     # simulate adding a new user into the original data file
     # df = pd.read_csv('./u.data')
     # df.to_csv('new_' + 'u.data')
-    df = pd.read_csv('./u.data',header=None)
-    df.to_csv('new_' + 'u.data',header=False,index=False)
-    with open(r'new_u.data',mode='a',newline='',encoding='utf8') as cfa:
-        wf = csv.writer(cfa,delimiter='\t')
+    df = pd.read_csv('./ml-latest-small/ratings.csv',header=0)
+    df.to_csv('new_' + 'ratings.csv',header=False,index=False)
+    with open(r'new_ratings.csv',mode='a',newline='',encoding='utf8') as cfa:
+        wf = csv.writer(cfa,delimiter=',')
         data_input = []
-        s = [user,str(iid),int(score),'0']
+        s = [user,str(iid),int(score),int(time.time())]
         data_input.append(s)
         for k in data_input:
             wf.writerow(k)
@@ -166,16 +175,16 @@ def user_add(iid, score):
 def get_initial_items(iid, score, n=12):
     res = []
     user_add(iid, score)
-    file_path = os.path.expanduser('new_u.data')
-    reader = Reader(line_format='user item rating timestamp', sep='\t')
+    file_path = os.path.expanduser('new_ratings.csv')
+    reader = Reader(line_format='user item rating timestamp', sep=',')
     data = Dataset.load_from_file(file_path, reader=reader)
     trainset = data.build_full_trainset()
     algo = KNNBasic(sim_options={'name': 'pearson', 'user_based': False})
     algo.fit(trainset)
     dump.dump('./model',algo=algo,verbose=1)
     all_results = {}
-    for i in range(1682):
-        uid = str(944)
+    for i in range(9742):
+        uid = str(611)
         iid = str(i)
         pred = algo.predict(uid,iid).est
         all_results[iid] = pred
