@@ -18,9 +18,11 @@
     </el-menu>
     <el-container>
         <el-main>
-            <h2>Recommended</h2>
-            <p>Please rate this movie we 1st recommend for you</p>
-            <p>Better recommendation will be generated based on this rate, thanks!</p>
+            <h2>First Round Recommendation</h2>
+            <div v-if="recommended.length">
+                <p>According to your rated movies we find 12 similar movies for you</p>
+                <p>Please give your rate for each movie. Second round recommendation will be generated based on these rate, thank you!</p>
+            </div>
             <el-row :gutter="20">
                 <el-col :span="4" v-for="o in recommended" :key="o.movie_id" :offset="0">
                     <el-card :body-style="{ padding: '0px' }"
@@ -30,8 +32,8 @@
                                 :src="o.poster_url"
                                 fit="cover"></el-image>
                         <h4 style="padding:0 10px;margin:0">{{o.movie_title}}</h4>
-                        <h6 style="padding:0 10px;margin:0.5em">{{ o.release_year }}</h6>
-                        <p>Rate:</p>
+                        <h5 style="padding:0 10px;margin:0">Release year:{{ o.release_year }}</h5>
+                        <h5 style="padding:0 10px;margin:0">Your rate:</h5>
                         <el-rate v-model="o.feedback" style="padding:10px 10px;" @change="storeFeedback(o)"></el-rate>
                         <!-- <el-button type="danger" plain style="position:absolute;bottom:10px;right:10px" @click="liked_btn(o)">
                             <i class="el-icon-medal el-icon--left"></i>Like
@@ -39,13 +41,18 @@
                     </el-card>
                 </el-col>
             </el-row>
-            <el-button type="danger" plain @click="confirmFeedback()" :disabled="confirmFeedback_show">
-                <i class="el-icon-check el-icon--left"></i>Confirm Rate
+            <p></p>
+            <el-button type="danger" plain @click="confirmFeedback" :disabled="confirmFeedback_show">
+                <i class="el-icon-check el-icon--left"></i>Submit your rate of first round recommendation 
             </el-button>
-            <h2>Liked with Similar Items</h2>
-
+            <!-- <div :visable="secondRound"> -->
+            <h2>Second Round Recommendation</h2>
+            <div v-if="second_recommended.length"></div>
+                <p>We've found 12 movies that are similar to the ones you rated above, you might like them better</p>
+                <p>Again, please give your rate for these recommend movies, This will help us to develop better recommend system in the future, thank you!</p>
+            </div>
             <el-row :gutter="20">
-                <el-col :span="4" v-for="o in liked" :key="o.movie_id" :offset="0">
+                <el-col :span="4" v-for="o in second_recommended" :key="o.movie_id" :offset="0">
                     <el-card :body-style="{ padding: '0px' }"
                              style="margin-top:15px;height:400px;overflow:auto;position:relative">
                         <el-image
@@ -53,7 +60,9 @@
                                 :src="o.poster_url"
                                 fit="cover"></el-image>
                         <h4 style="padding:0 10px;margin:0">{{o.movie_title}}</h4>
-                        <h6 style="padding:0 10px;margin:0.5em">{{ o.release_year }}</h6>
+                        <h5 style="padding:0 10px;margin:0">Release year:{{ o.release_year }}</h5>
+                        <h5 style="padding:0 10px;margin:0">Your rate:</h5>
+                        <el-rate v-model="o.feedback" style="padding:10px 10px;" @change="store2ndFeedback(o)"></el-rate>
                     </el-card>
                 </el-col>
             </el-row>
@@ -103,7 +112,7 @@
                                     :src="o.poster_url"
                                     fit="cover"></el-image>
                             <h4 style="padding:0 10px;margin:0">{{o.movie_title}}</h4>
-                            <h6 style="padding:0 10px;margin:0">Release year: {{ o.release_year }}</h6>
+                            <h5 style="padding:0 10px;margin:0">Release year:{{ o.release_year }}</h5>
                             <el-rate v-model="o.score" style="padding:10px 10px;"></el-rate>
                         </el-card>
                     </el-col>
@@ -138,7 +147,8 @@
                 movies: [],
                 recommended: [],
                 allFeedback: {},
-                liked: [],
+                second_recommended: [],
+                // secondRound: fales,
                 userLogin: true,
                 dialog0: false,
                 dialog1: false,
@@ -194,23 +204,33 @@
             // temporarily store user's feedback
             storeFeedback:function(movie){
                 // this.allFeedback.set(movie.movie_id, movie.feedback)
-                this.allFeedback[movie.movie_id] = movie.feedback
-                console.log(Object.keys(this.allFeedback).length)
+                this.allFeedback[movie.movie_id] = movie.feedback;
+                console.log(Object.keys(this.allFeedback).length);
                 if(Object.keys(this.allFeedback).length>=1){
-                    this.confirmFeedback_show = false 
+                    this.confirmFeedback_show = false;
                 }
             },
+            // 
+            store2ndFeedback: function(movie){
+
+            },
             // store all user's feedback and get 2nd recommendation
-            confirmFeedback(){
-                alert(JSON.stringify(this.allFeedback))
+            confirmFeedback: function(){
+                console.log(JSON.stringify(this.allFeedback));
                 // store all user's feedback to local users.csv
-                axios.post(this.baseurl + "/api/fisrt_feedback", [this.username, this.allFeedback])
+                axios.post(this.baseurl + "/api/fisrt_feedback", [this.username, this.allFeedback]).then((res=>{
+                    console.log(JSON.stringify(res.data));
+                }));
                 // get 2nd recommend
-                axios.get(this.baseurl+'/api/add_recommend/' + [this.allFeedback]).then((res) =>{
+                axios.post(this.baseurl + '/api/add_recommend', [this.username, this.allFeedback]).then((res) => {
                     console.log(res.data);
                     // that.recommended.push.apply(that.recommended,res.data);
-                    that.liked.push.apply(that.liked,res.data);
+                    // that.liked.push.apply(that.liked,res.data);
+                    this.second_recommended = res.data;
+                    console.log(this.second_recommended);
+                    this.confirmFeedback_show = true;
                 })
+                
             },
             // liked_btn:function(movie){
             //     let that = this;

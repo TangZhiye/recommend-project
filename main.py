@@ -20,6 +20,7 @@ from surprise import Dataset
 import time
 
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -128,7 +129,7 @@ def store_first_feedback(first_feedback: list):
         return {"result": True}
     # store username
     users_df = read_csv(users_path,index_col=0,header=0)
-    print(users_df)
+    # print(users_df)
     print(users_df.iloc[-1,0])
     new_user_id = users_df.iloc[-1,0] + 1
     for movie_id, rate in first_feedback.items():
@@ -139,23 +140,27 @@ def store_first_feedback(first_feedback: list):
     users_df = users_df.append(new_user_df, ignore_index=False)
     users_df = users_df.reset_index(drop=True)
     users_df.to_csv(users_path,index=True)
+    # results = get_second_recommend(first_feedback)
     return {"result": True}
+    # return json.loads(results.to_json(orient="records"))
 
-@app.get("/api/add_recommend")
+@app.post("/api/add_recommend")
 async def add_recommend(first_feedback: list):
-    first_feedback = first_feedback[0]
-
-# @app.get("/api/add_recommend/{item_id}")
-# async def add_recommend(item_id):
-#     res = get_similar_items(str(item_id), n=5)
-#     res = [int(i) for i in res]
-#     print(res)
-#     rec_movies = data.loc[data['movie_id'].isin(res)]
-#     print(rec_movies)
-#     rec_movies.loc[:, 'like'] = None
-#     results = rec_movies.loc[:, ['movie_id', 'movie_title', 'release_date', 'poster_url', 'like']]
-#     return json.loads(results.to_json(orient="records"))
-
+# def get_second_recommend(first_feedback: list):
+    print('2nd recommend start!')
+    username = first_feedback[0]
+    first_feedback = first_feedback[1]  
+    # 以下是临时代码，用来继续搭建第二轮推荐的前端
+    item_id = list(first_feedback.keys())[0]
+    res = get_similar_items(str(item_id), n=12)
+    res = [int(i) for i in res]
+    print(res)
+    rec_movies = data.loc[data['movie_id'].isin(res)]
+    print(rec_movies)
+    rec_movies.loc[:, 'feedback'] = None
+    results = rec_movies.loc[:, ['movie_id', 'movie_title', 'release_year', 'poster_url', 'feedback']]
+    return json.loads(results.to_json(orient="records"))
+    # return results
 
 def user_add(iid, score):
     user = '611'
@@ -175,7 +180,8 @@ def user_add(iid, score):
 def get_initial_items(iid, score, n=12):
     res = []
     user_add(iid, score)
-    file_path = os.path.expanduser('new_ratings.csv')
+    # file_path = os.path.expanduser('new_ratings.csv')
+    file_path = './new_ratings.csv'
     reader = Reader(line_format='user item rating timestamp', sep=',')
     data = Dataset.load_from_file(file_path, reader=reader)
     trainset = data.build_full_trainset()
