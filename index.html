@@ -45,9 +45,9 @@
             <el-button type="danger" plain @click="confirmFeedback" :disabled="confirmFeedback_show">
                 <i class="el-icon-check el-icon--left"></i>Submit your rate of first round recommendation 
             </el-button>
-            <!-- <div :visable="secondRound"> -->
+            <!-- 2nd round recommendation -->
             <h2>Second Round Recommendation</h2>
-            <div v-if="second_recommended.length"></div>
+            <div v-if="second_recommended.length">
                 <p>We've found 12 movies that are similar to the ones you rated above, you might like them better</p>
                 <p>Again, please give your rate for these recommend movies, This will help us to develop better recommend system in the future, thank you!</p>
             </div>
@@ -80,7 +80,7 @@
                 </span>
             </el-dialog>
 
-            <!--  Dialog0-->
+            <!--  cold start -->
             <el-dialog
                     title="Please choose any genre you're interested in."
                     :visible="dialog0"
@@ -97,7 +97,7 @@
                                style="min-width:128px">Next</el-button>
                 </span>
             </el-dialog>
-            <!--  Dialog1-->
+            <!--  1st round recommendation -->
             <el-dialog
                     title="Please rate the following movies."
                     :visible="dialog1"
@@ -144,11 +144,11 @@
                 username: '',
                 genre: [],
                 selected_genre: [],
-                movies: [],
+                movies: [], // random moives for cold start
+                rated_movies: [], // rated movies for 1st round recommendation
                 recommended: [],
-                allFeedback: {},
+                allFeedback: {}, // user's first feedback
                 second_recommended: [],
-                // secondRound: fales,
                 userLogin: true,
                 dialog0: false,
                 dialog1: false,
@@ -186,9 +186,14 @@
                 })
             },
             step2: function () {
-                //this.dialog1 = false;
                 console.log(this.movies);
-                axios.post(this.baseurl + "/api/recommend", [this.username, this.movies]).then((res) => {
+                // only send the rated movies 
+                for(var movie of this.movies){
+                    if(movie['score'] != 0){
+                        this.rated_movies.push(movie)
+                    }
+                }
+                axios.post(this.baseurl + "/api/recommend", [this.username, this.rated_movies]).then((res) => {
                     // console.log(res.data)
                     this.recommended = res.data;
                     if (this.recommended.length > 0) {
