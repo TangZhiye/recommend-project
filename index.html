@@ -20,7 +20,8 @@
         <el-main>
             <h2>First Round Recommendation</h2>
             <div v-if="recommended.length">
-                <p>According to your rated movies we find 12 similar movies for you</p>
+                <p v-if="method1">We've found that other users with similar tastes with you also like the following movies</p>
+                <p v-if="method2">We recommend the following movies based on your preferred movie genre and ratings from other users who like the same movie genre</p>
                 <p>Please give your rate for each movie. Second round recommendation will be generated based on these rate, thank you!</p>
             </div>
             <el-row :gutter="20">
@@ -34,21 +35,21 @@
                         <h4 style="padding:0 10px;margin:0">{{o.movie_title}}</h4>
                         <h5 style="padding:0 10px;margin:0">Release year:{{ o.release_year }}</h5>
                         <h5 style="padding:0 10px;margin:0">Your rate:</h5>
-                        <el-rate v-model="o.feedback" style="padding:10px 10px;" @change="storeFeedback(o)"></el-rate>
+                        <el-rate :allow-half="true" v-model="o.feedback" style="padding:10px 10px;" @change="storeFeedback(o)"></el-rate>
                         <!-- <el-button type="danger" plain style="position:absolute;bottom:10px;right:10px" @click="liked_btn(o)">
                             <i class="el-icon-medal el-icon--left"></i>Like
                         </el-button> -->
                     </el-card>
                 </el-col>
             </el-row>
-            <p></p>
+            <br>
             <el-button type="danger" plain @click="confirmFeedback" :disabled="confirmFeedback_show">
-                <i class="el-icon-check el-icon--left"></i>Submit your rate of first round recommendation 
+                <i class="el-icon-check el-icon--left"></i>Submit your rate of first round recommendation
             </el-button>
             <!-- 2nd round recommendation -->
             <h2>Second Round Recommendation</h2>
             <div v-if="second_recommended.length">
-                <p>We've found 12 movies that are similar to the ones you rated above, you might like them better</p>
+                <p>We further recommend 12 movies based on the ones you rated in previous round, guess you'll like them better</p>
                 <p>Again, please give your rate for these recommend movies, This will help us to develop better recommend system in the future, thank you!</p>
             </div>
             <el-row :gutter="20">
@@ -62,12 +63,21 @@
                         <h4 style="padding:0 10px;margin:0">{{o.movie_title}}</h4>
                         <h5 style="padding:0 10px;margin:0">Release year:{{ o.release_year }}</h5>
                         <h5 style="padding:0 10px;margin:0">Your rate:</h5>
-                        <el-rate v-model="o.feedback" style="padding:10px 10px;" @change="store2ndFeedback(o)"></el-rate>
+                        <el-rate :allow-half="true" v-model="o.feedback" style="padding:10px 10px;" @change="store2ndFeedback(o)"></el-rate>
                     </el-card>
                 </el-col>
             </el-row>
+            <br>
+            <el-button type="danger" plain @click="confirm2ndFeedback" :disabled="confirm2ndFeedback_show">
+                <i class="el-icon-check el-icon--left"></i>Submit your rate of second round recommendation
+            </el-button>
+            <!-- ending -->
+            <div v-if="ending_show">
+                <h2>This is the end of our recommendation system, thanks for your participation!</h2>
+            </div>
+
             <!-- user login -->
-            <el-dialog 
+            <el-dialog
                     title="Information Collection"
                     :visible="userLogin"
                     width="60%"
@@ -99,11 +109,12 @@
             </el-dialog>
             <!--  1st round recommendation -->
             <el-dialog
-                    title="Please rate the following movies."
+                    title="Please rate all the following movies, they are randomly picked from your preferred genre."
                     :visible="dialog1"
                     width="80%"
                     :show-close="false"
             >
+                <span>We will generate recommendation based on your rate.</span>
                 <el-row :gutter="20">
                     <el-col :span="4" v-for="o in movies" :key="o.movie_id" :offset="0">
                         <el-card :body-style="{ padding: '0px' }" style="margin-top:15px;height:368px;overflow:auto">
@@ -113,7 +124,7 @@
                                     fit="cover"></el-image>
                             <h4 style="padding:0 10px;margin:0">{{o.movie_title}}</h4>
                             <h5 style="padding:0 10px;margin:0">Release year:{{ o.release_year }}</h5>
-                            <el-rate v-model="o.score" style="padding:10px 10px;"></el-rate>
+                            <el-rate :allow-half="true" v-model="o.score" style="padding:10px 10px;"></el-rate>
                         </el-card>
                     </el-col>
                 </el-row>
@@ -144,15 +155,20 @@
                 username: '',
                 genre: [],
                 selected_genre: [],
+                method1: false, // current user based recommend method
+                method2: false, // current content based recommend method
                 movies: [], // random moives for cold start
                 rated_movies: [], // rated movies for 1st round recommendation
                 recommended: [],
                 allFeedback: {}, // user's first feedback
                 second_recommended: [],
+                secondFeedback: {}, // user's second feedback
                 userLogin: true,
                 dialog0: false,
                 dialog1: false,
                 confirmFeedback_show: true,
+                confirm2ndFeedback_show: true,
+                ending_show: false,
                 iconClasses: ['icon-rate-face-1', 'icon-rate-face-2', 'icon-rate-face-3'],
                 checkboxGroup1: [],
                 value: 2
@@ -168,6 +184,7 @@
                         this.dialog0 = true;
                     }
                 })
+                
             },
             step1: function () {
                 axios.post(this.baseurl + "/api/movies", this.selected_genre).then((res) => {
@@ -187,7 +204,7 @@
             },
             step2: function () {
                 console.log(this.movies);
-                // only send the rated movies 
+                // only send the rated movies
                 for(var movie of this.movies){
                     if(movie['score'] != 0){
                         this.rated_movies.push(movie)
@@ -205,24 +222,29 @@
                         });
                     }
                 });
+                this.getRecommendMethod();
             },
             // temporarily store user's feedback
             storeFeedback:function(movie){
                 // this.allFeedback.set(movie.movie_id, movie.feedback)
                 this.allFeedback[movie.movie_id] = movie.feedback;
                 console.log(Object.keys(this.allFeedback).length);
-                if(Object.keys(this.allFeedback).length>=1){
+                if(Object.keys(this.allFeedback).length>=12){
                     this.confirmFeedback_show = false;
                 }
             },
-            // 
+            //
             store2ndFeedback: function(movie){
-
+                this.secondFeedback[movie.movie_id] = movie.feedback;
+                console.log(Object.keys(this.secondFeedback).length);
+                if(Object.keys(this.secondFeedback).length>=12){
+                    this.confirm2ndFeedback_show = false;
+                }
             },
             // store all user's feedback and get 2nd recommendation
             confirmFeedback: function(){
                 console.log(JSON.stringify(this.allFeedback));
-                // store all user's feedback to local users.csv
+                // store 1st user's feedback to local users.csv
                 axios.post(this.baseurl + "/api/fisrt_feedback", [this.username, this.allFeedback]).then((res=>{
                     console.log(JSON.stringify(res.data));
                 }));
@@ -235,18 +257,29 @@
                     console.log(this.second_recommended);
                     this.confirmFeedback_show = true;
                 })
-                
+
             },
-            // liked_btn:function(movie){
-            //     let that = this;
-            //     this.liked.push(movie);
-            //     this.recommended.splice(this.recommended.findIndex(item => item.movie_id === movie.movie_id), 1);
-            //     axios.get(this.baseurl+'/api/add_recommend/'+movie.movie_id).then((res) =>{
-            //         console.log(res.data);
-            //         // that.recommended.push.apply(that.recommended,res.data);
-            //         that.liked.push.apply(that.liked,res.data);
-            //     })
-            // }
+            confirm2ndFeedback: function(){
+                // store 2nd user's feedback to local users.csv
+                axios.post(this.baseurl + "/api/second_feedback", [this.username, this.secondFeedback]).then((res=>{
+                    console.log(JSON.stringify(res.data));
+                }));
+                this.ending_show = true;
+            },
+            // user-based or content-based
+            getRecommendMethod: function(){
+                axios.get(this.baseurl + "/api/method").then((res) => {
+                    console.log(res.data['method'])
+                    alert(res.data['method'])
+                    if(res.data['method']=='Method_1'){
+                        this.method1 = true;
+                    }
+                    if(res.data['method']=='Method_2'){
+                        this.method2 = true;
+                    }
+                })
+            }
+
         },
         mounted: function () {
             axios.get(this.baseurl + "/api/genre").then((res) => {
@@ -276,7 +309,7 @@
                     }
                 }
                 console.log(scores);
-                if (scores >= 1) {
+                if (scores >= 18) {
                     return false;
                 } else {
                     return true
