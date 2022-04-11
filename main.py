@@ -155,6 +155,12 @@ def getMethod():
     print(method)
     return {"method": method}
 
+@app.post("/api/save_user_info")
+def save_user_info(user_info: list):
+    print(user_info)
+    with open(r'users_info.csv', mode='a', newline='', encoding='utf8') as cfa:
+        wf = csv.writer(cfa, delimiter=',')
+        wf.writerow(user_info)
 
 @app.post("/api/movies")
 def get_movies(genre: list):

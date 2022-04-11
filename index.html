@@ -8,6 +8,9 @@
         body {
             margin: 0;
         }
+        .el-row {
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <div id="app">
@@ -78,12 +81,35 @@
 
             <!-- user login -->
             <el-dialog
-                    title="Information Collection"
-                    :visible="userLogin"
-                    width="60%"
-                    :show-close="false"
-            >
-                <el-input v-model="username" placeholder="Please input your name"></el-input>
+                title="Information Collection"
+                :visible="userLogin"
+                width="60%"
+                :show-close="false"
+            >   
+                <el-row>
+                    <label >Name</label>
+                    <el-input v-model="username" placeholder="Please input your name"></el-input>
+                </el-row>
+                <el-row>
+                    <label style="display: block;">Gender</label>
+                    <el-radio v-model="gender" label="Male">male</el-radio>
+                    <el-radio v-model="gender" label="Female">female</el-radio>
+                </el-row>
+                <el-row>
+                    <label style="display: block;">Age</label>
+                    <el-input-number v-model="user_age" :min="1" :max="100" ></el-input-number>
+                </el-row>
+                <el-row>
+                    <label style="display: block;">Educational Background</label>
+                    <el-select v-model="user_education" placeholder="Select">
+                        <el-option
+                        v-for="item in education_background"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value">
+                        </el-option>
+                    </el-select>
+                </el-row>
                 <span slot="footer" class="dialog-footer">
                     <el-button type="danger" @click="step0" plain :disabled="step0_show"
                                style="min-width:128px">Next</el-button>
@@ -153,6 +179,28 @@
             return {
                 baseurl: 'http://127.0.0.1:8000',
                 username: '',
+                user_age: 20,
+                gender: 'male',
+                education_background:[{
+                    value: 'Middle School',
+                    label: 'Middle School'
+                },{
+                    value: 'High Schoole',
+                    label: 'High Schoole'
+                },{
+                    value: 'Undergraduate',
+                    label: 'Undergraduate'
+                },{
+                    value: 'Postgraduate',
+                    label: 'Postgraduate'
+                },{
+                    value: 'Doctor',
+                    label: 'Doctor'
+                },{
+                    value: 'Other',
+                    label: 'Other'
+                }],
+                user_education: '',
                 genre: [],
                 selected_genre: [],
                 method1: false, // current user based recommend method
@@ -178,10 +226,11 @@
             step0: function(){
                 axios.post(this.baseurl + "/api/login", [this.username]).then((res) => {
                     if (!res.data["result"]){
-                        alert("Name is Duplicated! Input again.")
+                        alert("Name is duplicated! Please input again.")
                     } else{
                         this.userLogin = false;
                         this.dialog0 = true;
+                        
                     }
                 })
                 
@@ -223,6 +272,14 @@
                     }
                 });
                 this.getRecommendMethod();
+                this.saveUserInfo();
+            },
+            // save user login infomation
+            saveUserInfo: function(){
+                var user_info = [this.username,this.user_age.toString(),this.gender,this.user_education]
+                axios.post(this.baseurl + "/api/save_user_info",user_info).then((res) => {
+                    console.log(res.data)
+                })
             },
             // temporarily store user's feedback
             storeFeedback:function(movie){
@@ -270,7 +327,6 @@
             getRecommendMethod: function(){
                 axios.get(this.baseurl + "/api/method").then((res) => {
                     console.log(res.data['method'])
-                    alert(res.data['method'])
                     if(res.data['method']=='Method_1'){
                         this.method1 = true;
                     }
