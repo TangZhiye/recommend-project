@@ -124,13 +124,13 @@ def login(username: list):
             return {"result": False}
         else:
             # give a random algo
-            if len(users_method_df[users_method_df["Recommend_Algo"] == "Method_1"]) < 10:
-                if len(users_method_df[users_method_df["Recommend_Algo"] == "Method_2"]) < 10:
+            if len(users_method_df[users_method_df["Recommend_Algo"] == "Method_1"]) < 5:
+                if len(users_method_df[users_method_df["Recommend_Algo"] == "Method_2"]) < 5:
                     recommendAlgo = choice(['Method_1', 'Method_2'])
                 else:
                     recommendAlgo = "Method_1"
             else:
-                if len(users_method_df[users_method_df["Recommend_Algo"] == "Method_2"]) < 10:
+                if len(users_method_df[users_method_df["Recommend_Algo"] == "Method_2"]) < 5:
                     recommendAlgo = "Method_2"
                 else:
                     # return {"result": False}
@@ -271,11 +271,12 @@ def store_second_feedback(second_feedback: list):
 
 
 @app.post("/api/add_recommend")
-async def add_recommend(first_feedback: list):
+# async def add_recommend(first_feedback: list):
+def add_recommend(first_feedback: list):
+    # time.sleep(1)
     print('2nd recommend start!')
     username = first_feedback[0]
     first_feedback = first_feedback[1]
-    # 以下是临时代码，用来继续搭建第二轮推荐的前端
     item_id = list(first_feedback.keys())[0]
     res = recommend()
     res = [int(i) for i in res]
@@ -345,6 +346,7 @@ def add_feedback(first_feedback):
 
 
 def recommend():
+    # time.sleep(1)
     if method == "Method_1":
         res = Method_1(k_Method_1, n)
     else:

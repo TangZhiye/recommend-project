@@ -107,6 +107,7 @@ def Method_2(n):
     movies_with_genres.rename(columns={'movieId': 'movie_id'}, inplace=True)
     movies_genre_matrix = movies_with_genres[genre_list].to_numpy()
     #new user profile build
+    ratings_df = pd.read_csv(ratings_data, header=None, names=["user_id", "movie_id", "rating", "timestamp"])
     new_user_rating_df = ratings_df[ratings_df['user_id'] == 611]
     new_user_rating_df = new_user_rating_df.reset_index(drop=True)
     user_movie_rating_df = pd.merge(new_user_rating_df, movies_with_genres)
