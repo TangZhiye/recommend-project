@@ -124,13 +124,13 @@ def login(username: list):
             return {"result": False}
         else:
             # give a random algo
-            if len(users_method_df[users_method_df["Recommend_Algo"] == "Method_1"]) < 5:
-                if len(users_method_df[users_method_df["Recommend_Algo"] == "Method_2"]) < 5:
+            if len(users_method_df[users_method_df["Recommend_Algo"] == "Method_1"]) < 10:
+                if len(users_method_df[users_method_df["Recommend_Algo"] == "Method_2"]) < 10:
                     recommendAlgo = choice(['Method_1', 'Method_2'])
                 else:
                     recommendAlgo = "Method_1"
             else:
-                if len(users_method_df[users_method_df["Recommend_Algo"] == "Method_2"]) < 5:
+                if len(users_method_df[users_method_df["Recommend_Algo"] == "Method_2"]) < 10:
                     recommendAlgo = "Method_2"
                 else:
                     # return {"result": False}
